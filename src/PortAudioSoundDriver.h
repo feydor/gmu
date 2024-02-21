@@ -12,8 +12,9 @@ public:
     void start_audio() override;
     void stop_audio() override;
     void handle_error(PaError error);
-    virtual void load_samples(short *buf, unsigned long nframes) const override;
-
+    void load_samples(short *buf, unsigned long nframes) const override;
+    bool stream_running() const override;
+    void print_devices_info();
 private:
     /**
      * Number of audio buffers per second. Adjust if you encounter audio skipping.
@@ -23,6 +24,8 @@ private:
     const int fill_rate = 80;
     std::function<void(short *, unsigned long)> samples_callback;
     PaStream *stream = nullptr;
+    bool initialized = false;
+    bool running = false;
 };
 
 #endif

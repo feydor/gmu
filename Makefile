@@ -1,10 +1,22 @@
+# OS specific
+ifeq ($(OS),Windows_NT)
+    CFLAGS += -D WIN32
+else
+    UNAME_S := $(shell uname -s)
+    ifeq ($(UNAME_S),Linux)
+        CFLAGS += -D LINUX
+    endif
+    ifeq ($(UNAME_S),Darwin)
+        CFLAGS += -D OSX
+		LDFLAGS += -framework CoreServices -framework CoreFoundation -framework AudioUnit \
+				   -framework AudioToolbox -framework CoreAudio
+    endif
+endif
 
 CC ?= g++
 LD = $(CC)
 CFLAGS += -I. -I.. -std=c++14 `pkg-config --cflags libgme` -I/opt/homebrew/include
 LIBS =	`pkg-config --libs libgme` -L/opt/homebrew/lib -lportaudio
-LDFLAGS += -framework CoreServices -framework CoreFoundation -framework AudioUnit \
-				   -framework AudioToolbox -framework CoreAudio
 MACHINE = $(shell $(CC) -dumpmachine)
 EXE = gmu-$(MACHINE)
 

@@ -8,7 +8,7 @@
 #include <stdexcept>
 
 Player::Player(long sample_rate) : sample_rate{sample_rate} {
-    auto driver = new PortAudioSoundDriver([&](short* buf, unsigned long frame_count) {
+    driver = new PortAudioSoundDriver([&](short* buf, unsigned long frame_count) {
         auto err = gme_play(this->emu, frame_count, buf);
         if (err) {
             fprintf(stderr, "err=%s\n", err);
@@ -16,7 +16,6 @@ Player::Player(long sample_rate) : sample_rate{sample_rate} {
         }
     },
     sample_rate);
-    driver->start_audio();
 }
 
 Player::~Player() {
@@ -78,7 +77,10 @@ void Player::start_track(int track) {
     // Set fade out point
     gme_set_fade(emu, track_info->length - 8000);
 
+    // Start audio
     paused = false;
+    if (!driver->stream_running())
+        driver->start_audio();
 }
 
 void Player::handle_error(const char* str) {
