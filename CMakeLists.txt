@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.24)
 project(gmu)
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(gmu main.cpp)
+add_executable(gmu main.cpp Player.cpp PortAudioSoundDriver.cpp)
 
 include_directories(/opt/homebrew/include)
 link_directories(/opt/homebrew/lib)

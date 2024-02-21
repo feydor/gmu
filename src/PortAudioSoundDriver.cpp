@@ -13,7 +13,7 @@ static int portaudio_callback(const void *inputBuffer, void *outputBuffer,
                            void *userData)
 {
     // extract data
-    SoundDriver* driver = (SoundDriver*) userData;
+    auto driver = (PortAudioSoundDriver*) userData;
     int16 *out = (int16*)outputBuffer;
     (void) inputBuffer;
     (void) timeInfo;
@@ -21,7 +21,7 @@ static int portaudio_callback(const void *inputBuffer, void *outputBuffer,
 
     // do buffer update, left + right samples
     short samples[2*framesPerBuffer];
-    driver->samples_callback(samples, 2*framesPerBuffer);
+    driver->load_samples(samples, 2*framesPerBuffer);
 
     for(unsigned int i=1; i<2*framesPerBuffer; i+=2) {
         *out++ = samples[i-1];
@@ -30,17 +30,17 @@ static int portaudio_callback(const void *inputBuffer, void *outputBuffer,
     return 0;
 }
 
-SoundDriver::SoundDriver(std::function<void(short *, unsigned long)> samples_cb, long sample_rate)
-        : samples_callback{samples_cb}, sample_rate{sample_rate} {
-    
+PortAudioSoundDriver::PortAudioSoundDriver(std::function<void(short *, unsigned long)> samples_cb, long sample_rate)
+        : samples_callback{samples_cb} {
+
     // calculate buffer size based on fill_rate and sample_rate
     int min_size = sample_rate * 2 / fill_rate;
-	int buf_size = 512;
-	while (buf_size < min_size)
-		buf_size *= 2;
+    int buf_size = 512;
+    while (buf_size < min_size)
+        buf_size *= 2;
 
     // init portaudio
-    //TODO: use default device for now
+    //TODO: using default device for now
     handle_error(Pa_Initialize());
     auto err = Pa_OpenDefaultStream(&stream,
                                 0,          /* no input channels */
@@ -53,7 +53,7 @@ SoundDriver::SoundDriver(std::function<void(short *, unsigned long)> samples_cb,
     handle_error(err);
 }
 
-SoundDriver::~SoundDriver() {
+PortAudioSoundDriver::~PortAudioSoundDriver() {
     PaError err = Pa_StopStream(stream);
     if (err != paNoError) goto error;
     err = Pa_CloseStream(stream);
@@ -62,7 +62,19 @@ error:
     Pa_Terminate();
 }
 
-void SoundDriver::handle_error(PaError error) {
+void PortAudioSoundDriver::load_samples(short *buf, unsigned long nframes) const {
+    samples_callback(buf, nframes);
+};
+
+void PortAudioSoundDriver::start_audio() {
+    handle_error(Pa_StartStream(stream));
+}
+
+void PortAudioSoundDriver::stop_audio() {
+    handle_error(Pa_StopStream(stream));
+}
+
+void PortAudioSoundDriver::handle_error(PaError error) {
     if (error != paNoError) {
         Pa_StopStream(stream);
         Pa_CloseStream(stream);
@@ -70,12 +82,3 @@ void SoundDriver::handle_error(PaError error) {
         throw std::runtime_error(Pa_GetErrorText(error));
     }
 }
-
-void SoundDriver::start_audio() {
-    handle_error(Pa_StartStream(stream));
-}
-
-void SoundDriver::stop_audio() {
-    handle_error(Pa_StopStream(stream));
-}
-

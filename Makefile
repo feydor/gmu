@@ -22,10 +22,10 @@ debug: $(EXE)
 release: CFLAGS += -O3 -DNDEBUG
 release: $(EXE)
 
-$(EXE): main.cpp Player.cpp PortAudioSoundDriver.cpp
+$(EXE): src/main.cpp src/Player.cpp src/PortAudioSoundDriver.cpp
 	@echo Compiling $(EXE)...
 	@mkdir -p $(@D)
-	g++ $(LDFLAGS) $(CFLAGS) main.cpp Player.cpp PortAudioSoundDriver.cpp -o $(EXE) $(LIBS)
+	g++ $(LDFLAGS) $(CFLAGS) src/main.cpp src/Player.cpp src/PortAudioSoundDriver.cpp -o $(EXE) $(LIBS)
 
 clean:
 	rm -f $(MACHINE_OBJS) $(EXE)
