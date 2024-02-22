@@ -21,7 +21,7 @@ static int portaudio_callback(const void *inputBuffer, void *outputBuffer,
     (void) statusFlags;
 
     // do buffer update, left + right samples
-    short samples[2*framesPerBuffer];
+    i16 samples[2*framesPerBuffer];
     driver->load_samples(samples, 2*framesPerBuffer);
     for(unsigned int i=1; i<2*framesPerBuffer; i+=2) {
         *out++ = samples[i-1];
@@ -68,7 +68,7 @@ void PortAudioSoundDriver::print_devices_info() {
     outParams.suggestedLatency = Pa_GetDeviceInfo(outParams.device)->defaultLowOutputLatency;
 }
 
-PortAudioSoundDriver::PortAudioSoundDriver(std::function<void(short *, unsigned long)> samples_cb, long sample_rate)
+PortAudioSoundDriver::PortAudioSoundDriver(std::function<void(i16 *, unsigned long)> samples_cb, long sample_rate)
         : samples_callback{samples_cb} {
 
     // calculate buffer size based on fill_rate and sample_rate
@@ -106,7 +106,7 @@ bool PortAudioSoundDriver::stream_running() const {
     return running;
 }
 
-void PortAudioSoundDriver::load_samples(short *buf, unsigned long nframes) const {
+void PortAudioSoundDriver::load_samples(i16 *buf, unsigned long nframes) const {
     samples_callback(buf, nframes);
 };
 

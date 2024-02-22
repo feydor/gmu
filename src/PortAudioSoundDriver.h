@@ -7,12 +7,17 @@
 
 class PortAudioSoundDriver : public SoundDriver {
 public:
-    PortAudioSoundDriver(std::function<void(short *, unsigned long)> samples_cb, long sample_rate);
+    /** Given callback will be called whenever the driver needs samples. It should write signed 16 bit samples to the buffer. */
+    PortAudioSoundDriver(std::function<void(i16 *, unsigned long)> samples_cb, long sample_rate);
     ~PortAudioSoundDriver();
     void start_audio() override;
     void stop_audio() override;
     void handle_error(PaError error);
-    void load_samples(short *buf, unsigned long nframes) const override;
+    /**
+     * Invokes the samples_callback
+     * @see PortAudioSoundDriver()
+     */
+    void load_samples(i16 *buf, unsigned long nframes) const override;
     bool stream_running() const override;
     void print_devices_info();
 private:
@@ -21,8 +26,8 @@ private:
      * Note that this sets the floor on how often you'll see changes to the audio
      *scope
      */
-    const int fill_rate = 80;
-    std::function<void(short *, unsigned long)> samples_callback;
+    const int fill_rate = 40;
+    std::function<void(i16 *, unsigned long)> samples_callback;
     PaStream *stream = nullptr;
     bool initialized = false;
     bool running = false;

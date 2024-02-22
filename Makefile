@@ -15,15 +15,14 @@ endif
 
 CC ?= g++
 LD = $(CC)
-CFLAGS += -I. -I.. -std=c++14 `pkg-config --cflags libgme` -I/opt/homebrew/include
+CFLAGS += -I. -I.. -std=c++14 `pkg-config --cflags libgme` -I/opt/homebrew/include -I./argspp/src
 LIBS =	`pkg-config --libs libgme` -L/opt/homebrew/lib -lportaudio
 MACHINE = $(shell $(CC) -dumpmachine)
 EXE = gmu-$(MACHINE)
 
 # main objects
-OBJS = main.o Player.o PortAudioSoundDriver.o
-
-MACHINE_OBJS = $(OBJS:%.o=obj/$(MACHINE)/%.o)
+# OBJS = main.o GmePlayer.o PortAudioSoundDriver.o
+# MACHINE_OBJS = $(OBJS:%.o=obj/$(MACHINE)/%.o)
 
 all: release
 .PHONY: debug release
@@ -34,12 +33,18 @@ debug: $(EXE)
 release: CFLAGS += -O3 -DNDEBUG
 release: $(EXE)
 
-$(EXE): src/main.cpp src/Player.cpp src/PortAudioSoundDriver.cpp
-	@echo Compiling $(EXE)...
+obj/${MACHINE}/args.o: argspp/src/args.cpp
+	@echo Compiling argspp.o...
 	@mkdir -p $(@D)
-	g++ $(LDFLAGS) $(CFLAGS) src/main.cpp src/Player.cpp src/PortAudioSoundDriver.cpp -o $(EXE) $(LIBS)
+	$(MAKE) -C argspp/ lib
+	cp argspp/bin/args.o obj/${MACHINE}
+
+$(EXE): src/main.cpp src/GmePlayer.cpp src/PortAudioSoundDriver.cpp src/Utils.cpp obj/${MACHINE}/args.o
+	@echo Compiling $(EXE)...
+	g++ $(LDFLAGS) $(CFLAGS) src/main.cpp src/GmePlayer.cpp src/PortAudioSoundDriver.cpp src/Utils.cpp obj/${MACHINE}/args.o -o $(EXE) $(LIBS)
 
 clean:
 	rm -f $(MACHINE_OBJS) $(EXE)
 	rm -r obj/$(MACHINE)
 	rm -d obj/ 2>/dev/null
+	cd argspp/ && make clean

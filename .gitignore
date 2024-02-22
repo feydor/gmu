@@ -3,3 +3,6 @@ obj/
 *dsym/
 *.a
 gmu-*
+.vscode/
+*.m3u
+*.gbs
