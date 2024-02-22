@@ -5,7 +5,11 @@ vgm cli player
 
 ## Dependencies
 - [libgme](https://github.com/mcfiredrill/libgme)
+    - macOS: `brew install libgme`
+    - Ubuntu: `apt install libgme-dev`
 - [portaudio](https://www.portaudio.com/)
+    - macOS: `brew install portaudio`
+    - Ubuntu: `apt install portaudio19-dev`
 
 ## Build
 Pull git submodules: `git submodule update --init --recursive`. Then run `make`.
