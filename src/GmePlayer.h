@@ -8,7 +8,7 @@
 class GmePlayer {
 public:
     /** Using default sound driver */
-    GmePlayer(long sample_rate);
+    GmePlayer(long sample_rate, bool loop);
     ~GmePlayer();
 
     /* Control methods */
@@ -34,6 +34,7 @@ private:
     gme_info_t* track_info = nullptr;
     SoundDriver *driver = nullptr;
     bool paused = true;
+    bool loop = false;
     long sample_rate = 44100;
 };
 

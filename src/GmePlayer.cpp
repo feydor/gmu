@@ -8,7 +8,7 @@
 #include <functional>
 #include <stdexcept>
 
-GmePlayer::GmePlayer(long sample_rate) : sample_rate{sample_rate} {
+GmePlayer::GmePlayer(long sample_rate, bool loop) : sample_rate{sample_rate}, loop{loop} {
     driver = new PortAudioSoundDriver([&](i16* buf, unsigned long frame_count) {
         auto err = gme_play(this->emu, frame_count, buf);
         if (err) {
@@ -62,7 +62,7 @@ void GmePlayer::start_track(int track) {
     GmePlayer::handle_error(gme_track_info(emu, &track_info, track));
     // Calculate track length
     if (track_info->length <= 0)
-        track_info->length = track_info->intro_length + track_info->loop_length; // *2
+        track_info->length = track_info->intro_length + track_info->loop_length * 2;
 
     // If above failed, set default track length
     if (track_info->length <= 0 )
@@ -74,7 +74,8 @@ void GmePlayer::start_track(int track) {
     GmePlayer::handle_error(gme_start_track(emu, track));
 
     // Set fade out point
-    gme_set_fade(emu, track_info->length - 8000);
+    if (!loop)
+        gme_set_fade(emu, track_info->length - 8000);
 
     // Start audio
     paused = false;
@@ -119,10 +120,10 @@ void GmePlayer::print_track_info(int track) const {
     printf("\n" );
     printf("Track    : %d\n", (int) track + 1);
     PRINT_NONEMPTY("Name     : %s\n", track_info->song);
-    printf("Length   : %ld:%02ld",
+    printf("Length   : %02ld:%02ld",
             (long) track_info->length / 1000 / 60, (long) track_info->length / 1000 % 60 );
-    if (track_info->loop_length > 0)
-        printf(" (endless)");
+    if (loop)
+        printf(" (loop)");
     printf("\n\n");
 }
 

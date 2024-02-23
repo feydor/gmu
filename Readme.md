@@ -22,3 +22,7 @@ p pause
 . skip forward 5 seconds
 , skip backwards 5 seconds
 ```
+
+## Known Issues
+- tiny tracks (less than 4 seconds) fail to fadeout
+- vgm files that are not SMS/Genesis output silence (probably issue with libgme)

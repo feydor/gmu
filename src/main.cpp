@@ -21,8 +21,9 @@ static bool ends_with(const string &str, const string &ext);
 static void check_for_key_press();
 
 int main(int argc, char* argv[]) {
-    args::ArgParser parser("Usage: gmu file [m3u-playlist] [-t track]", "1.0.0");
+    args::ArgParser parser("Usage: gmu file [m3u-playlist] [-t track] [-l loop]\nvideo game music format player", "1.0.0");
     parser.option("track t", "0");
+    parser.flag("loop l");
     parser.parse(argc, argv);
     if (parser.args.size() == 0) {
         printf("%s\n", parser.helptext.c_str());
@@ -32,7 +33,7 @@ int main(int argc, char* argv[]) {
     string path = parser.args[0];
     string opt_playlist = parser.args[1];
     int track = stoi(parser.value("track"));
-    GmePlayer player{44100};
+    GmePlayer player{44100, parser.found("loop")};
     player.load_file(path.c_str());
     if (ends_with(opt_playlist, ".m3u"))
         player.load_m3u(opt_playlist.c_str());
