@@ -7,6 +7,7 @@
 #include <cstring>
 #include <functional>
 #include <stdexcept>
+#include <climits>
 
 GmePlayer::GmePlayer(long sample_rate, bool loop) : sample_rate{sample_rate}, loop{loop} {
     driver = new PortAudioSoundDriver([&](i16* buf, unsigned long frame_count) {
@@ -40,6 +41,17 @@ void GmePlayer::toggle_play() {
         driver->stop_audio();
     else
         driver->start_audio();
+}
+
+void GmePlayer::toggle_loop() {
+    loop = !loop;
+    if (loop) {
+        gme_set_fade(emu, INT_MAX - 8000); // set fade to indefinte time
+    } else {
+        // do one more loop, then end
+        int cur = gme_tell(emu);
+        gme_set_fade(emu, cur + (track_info->length - 8000));
+    }
 }
 
 void GmePlayer::load_file(const char *path) {
@@ -136,6 +148,10 @@ void GmePlayer::print_now_playing_line() const {
     printf("%s", Utils::format_min_sec(since_ms / 1000.0f).c_str());
     printf(" / ");
     printf("%s seconds", Utils::format_min_sec(track_info->play_length / 1000.0f).c_str());
+    if (loop)
+        printf(" (loop)");
+    else
+        printf("       ");
     printf("\r");
     fflush(stdout);
 }

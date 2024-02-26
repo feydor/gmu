@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
     }
 
     string path = parser.args[0];
-    string opt_playlist = parser.args[1];
+    string opt_playlist = parser.args.size() == 2 ? parser.args[1] : "";
     int track = stoi(parser.value("track"));
     GmePlayer player{44100, parser.found("loop")};
     player.load_file(path.c_str());
@@ -72,6 +72,9 @@ int main(int argc, char* argv[]) {
                 break;
             case ',':
                 player.skip(-5000);
+                break;
+            case 'L':
+                player.toggle_loop();
                 break;
             default:
                 break;

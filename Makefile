@@ -13,8 +13,8 @@ else
     endif
 endif
 
-CC ?= g++
-LD = $(CC)
+CC=g++
+LD=$(CC)
 CFLAGS += -I. -I.. -std=c++14 `pkg-config --cflags libgme` -I/opt/homebrew/include -I./argspp/src
 LIBS =	`pkg-config --libs libgme` -L/opt/homebrew/lib -lportaudio
 MACHINE = $(shell $(CC) -dumpmachine)
@@ -41,7 +41,7 @@ obj/${MACHINE}/args.o: argspp/src/args.cpp
 
 $(EXE): src/main.cpp src/GmePlayer.cpp src/PortAudioSoundDriver.cpp src/Utils.cpp obj/${MACHINE}/args.o
 	@echo Compiling $(EXE)...
-	g++ $(LDFLAGS) $(CFLAGS) src/main.cpp src/GmePlayer.cpp src/PortAudioSoundDriver.cpp src/Utils.cpp obj/${MACHINE}/args.o -o $(EXE) $(LIBS)
+	$(CC) $(LDFLAGS) $(CFLAGS) src/main.cpp src/GmePlayer.cpp src/PortAudioSoundDriver.cpp src/Utils.cpp obj/${MACHINE}/args.o -o $(EXE) $(LIBS)
 
 clean:
 	rm -f $(MACHINE_OBJS) $(EXE)

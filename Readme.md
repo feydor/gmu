@@ -21,6 +21,8 @@ b prev track
 p pause
 . skip forward 5 seconds
 , skip backwards 5 seconds
+L toggle loop
+SPC toggle play
 ```
 
 ## Known Issues

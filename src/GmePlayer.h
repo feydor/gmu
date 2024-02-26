@@ -18,6 +18,7 @@ public:
     /** Starts playback. Must have called load_file before this. */
     void start_track(int track);
     void toggle_play();
+    void toggle_loop();
     void skip(int ms);
 
     /* Info methods */
@@ -34,8 +35,8 @@ private:
     gme_info_t* track_info = nullptr;
     SoundDriver *driver = nullptr;
     bool paused = true;
-    bool loop = false;
     long sample_rate = 44100;
+    bool loop = false;
 };
 
 #endif
