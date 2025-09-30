@@ -12,16 +12,28 @@ public:
     ~GmePlayer();
 
     /* Control methods */
+
     void load_file(const char *path);
     /** Loads an m3u playlist. Must have called load_file before this. */
     void load_m3u(const char* path);
     /** Starts playback. Must have called load_file before this. */
     void start_track(int track);
+    /**
+     * Try to start playback of next track
+     * @returns true if next track was started
+     */
+    bool start_next_track();
+    /**
+     * Try to start playback of previous track
+     * @returns true if previous track was started
+     */
+    bool start_prev_track();
     void toggle_play();
     void toggle_loop();
     void skip(int ms);
 
     /* Info methods */
+    
     bool track_ended() const;
     int track_count() const;
     void print_track_info(int track) const;
@@ -39,6 +51,7 @@ private:
     bool paused = true;
     long sample_rate = 44100;
     bool loop = false;
+    int current_track = 0;
 };
 
 #endif

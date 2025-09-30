@@ -34,6 +34,8 @@ int main(int argc, char* argv[]) {
     string opt_playlist = parser.args.size() == 2 ? parser.args[1] : "";
     int track = stoi(parser.value("track"));
     GmePlayer player{44100, parser.found("loop")};
+    printf("\033[1J\033[H"); fflush(stdout); // clear warnings from portaudio
+
     player.load_file(path.c_str());
     if (ends_with(opt_playlist, ".m3u"))
         player.load_m3u(opt_playlist.c_str());
@@ -45,10 +47,7 @@ int main(int argc, char* argv[]) {
     bool running = true;
     while (running) {
         if (player.track_ended()) {
-            ++track;
-            if (track < player.track_count())
-                player.start_track(track);
-            else
+            if (!player.start_next_track())
                 running = false;
         }
 
@@ -61,12 +60,12 @@ int main(int argc, char* argv[]) {
                 player.toggle_play();
                 break;
             case 'n':
-                if (track < player.track_count())
-                    player.start_track(++track);
+            case '>':
+                player.start_next_track();
                 break;
             case 'b':
-                if (track - 1 >= 0)
-                    player.start_track(--track);
+            case '<':
+                player.start_prev_track();
                 break;
             case '.':
                 player.skip(5000);
@@ -104,7 +103,6 @@ static void check_for_key_press() {
     struct termios old_tio, new_tio;
     unsigned char c;
 
-    // Get the terminal settings for stdin
     tcgetattr(STDIN_FILENO, &old_tio);
 
     // Save the old settings to restore them at the end

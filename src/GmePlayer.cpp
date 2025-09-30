@@ -57,6 +57,22 @@ void GmePlayer::toggle_loop() {
     }
 }
 
+bool GmePlayer::start_next_track() {
+    if (current_track + 1 < track_count()) {
+        start_track(current_track + 1);
+        return true;
+    }
+    return false;
+}
+
+bool GmePlayer::start_prev_track() {
+    if (current_track - 1 >= 0) {
+        start_track(current_track - 1);
+        return true;
+    }
+    return false;
+}
+
 void GmePlayer::load_file(const char *path) {
     // Determine file type
     gme_type_t file_type = gme_identify_extension(path);
@@ -69,11 +85,14 @@ void GmePlayer::load_file(const char *path) {
 void GmePlayer::start_track(int track) {
     Utils::require_nonnull(emu, "Didn't initialize emulator");
 
+    bool first_play = true;
     if (!track_info) {
         gme_free_info(track_info);
         track_info = nullptr;
+        first_play = false;
     }
 
+    current_track = track;
     GmePlayer::handle_error(gme_track_info(emu, &track_info, track));
     // Calculate track length
     if (track_info->length <= 0)
@@ -83,7 +102,9 @@ void GmePlayer::start_track(int track) {
     if (track_info->length <= 0 )
         track_info->length = (long) (2.5 * 60 * 1000);
 
-    print_track_info(track);
+    if (!first_play) {
+        print_track_info(track);
+    }
 
     // Start track
     GmePlayer::handle_error(gme_start_track(emu, track));
@@ -125,6 +146,7 @@ static int fade_time(int track_length) {
 }
 
 void GmePlayer::print_track_info(int track) const {
+    (void) track; // TODO: Remove this unused param?
     // Get and print main info for track
     Utils::require_nonnull(track_info, "Track not loaded");
 
@@ -139,14 +161,7 @@ void GmePlayer::print_track_info(int track) const {
     PRINT_NONEMPTY("Comment  : %s\n", track_info->comment);
     PRINT_NONEMPTY("Dumper   : %s\n", track_info->dumper);
     printf("Tracks   : %d\n", (int) gme_track_count(emu));
-    printf("\n" );
-    printf("Track    : %d\n", (int) track + 1);
-    PRINT_NONEMPTY("Name     : %s\n", track_info->song);
-    printf("Length   : %02ld:%02ld",
-            (long) track_info->length / 1000 / 60, (long) track_info->length / 1000 % 60 );
-    if (loop)
-        printf(" (loop)");
-    printf("\n\n");
+    printf("\n");
 }
 
 void GmePlayer::print_now_playing_line() const {
@@ -154,7 +169,8 @@ void GmePlayer::print_now_playing_line() const {
 
     int since_ms = gme_tell(emu);
     int total_ms = track_info->play_length;
-    printf("Playing %01.2f%%   \b\b\b\t", 100.0f * since_ms / total_ms);
+    printf("Playing Track #%d:  ", current_track + 1);
+    // printf("Playing Track #%d: %01.2f%%\b\b\b\b\t", current_track + 1, 100.0f * since_ms / total_ms);
     printf("%s", Utils::format_min_sec(since_ms / 1000.0f).c_str());
     printf(" / ");
     printf("%s seconds", Utils::format_min_sec(track_info->play_length / 1000.0f).c_str());
