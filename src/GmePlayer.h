@@ -31,6 +31,8 @@ public:
     static void handle_error(const char* str);
 
 private:
+    void set_current_fade_point();
+
     Music_Emu *emu = nullptr;
     gme_info_t* track_info = nullptr;
     SoundDriver *driver = nullptr;

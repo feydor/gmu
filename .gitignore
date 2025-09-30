@@ -1,4 +1,3 @@
-*.nsf
 obj/
 *dsym/
 *.a
@@ -6,3 +5,6 @@ gmu-*
 .vscode/
 *.m3u
 *.gbs
+*.vgz
+*.vgm
+*.spc

@@ -9,15 +9,18 @@
 #include <stdexcept>
 #include <climits>
 
-GmePlayer::GmePlayer(long sample_rate, bool loop) : sample_rate{sample_rate}, loop{loop} {
-    driver = new PortAudioSoundDriver([&](i16* buf, unsigned long frame_count) {
+static int fade_time(int track_length);
+
+GmePlayer::GmePlayer(long sample_rate, bool loop)
+    : sample_rate{sample_rate}, loop{loop} {
+    auto samples_callback = [&](i16* buf, unsigned long frame_count) {
         auto err = gme_play(this->emu, frame_count, buf);
         if (err) {
             fprintf(stderr, "err=%s\n", err);
             throw std::runtime_error(err);
         }
-    },
-    sample_rate);
+    };
+    driver = new PortAudioSoundDriver(samples_callback, sample_rate);
 }
 
 GmePlayer::~GmePlayer() {
@@ -46,11 +49,11 @@ void GmePlayer::toggle_play() {
 void GmePlayer::toggle_loop() {
     loop = !loop;
     if (loop) {
-        gme_set_fade(emu, INT_MAX - 8000); // set fade to indefinte time
+        // set fade to indefinte time
+        gme_set_fade(emu, INT_MAX - 8000);
     } else {
         // do one more loop, then end
-        int cur = gme_tell(emu);
-        gme_set_fade(emu, cur + (track_info->length - 8000));
+        gme_set_fade(emu, gme_tell(emu) + fade_time(track_info->length));
     }
 }
 
@@ -87,7 +90,7 @@ void GmePlayer::start_track(int track) {
 
     // Set fade out point
     if (!loop)
-        gme_set_fade(emu, track_info->length - 8000);
+        gme_set_fade(emu, fade_time(track_info->length));
 
     // Start audio
     paused = false;
@@ -103,8 +106,10 @@ void GmePlayer::load_m3u(const char* path) {
 }
 
 void GmePlayer::handle_error(const char* str) {
-    if (str)
+    if (str) {
+        fprintf(stderr, "Found error: %s\n", str); fflush(stderr);
         throw std::runtime_error(str);
+    }
 }
 
 void GmePlayer::skip(int ms) {
@@ -112,6 +117,11 @@ void GmePlayer::skip(int ms) {
     int since_ms = gme_tell(emu);
     if (since_ms + ms > 0 && since_ms + ms < track_info->play_length)
         gme_seek(emu, since_ms + ms);
+}
+
+/** Get the time in ms where the track should start fading out */
+static int fade_time(int track_length) {
+    return track_length - (track_length < 8000 ? 1000 : 8000);
 }
 
 void GmePlayer::print_track_info(int track) const {

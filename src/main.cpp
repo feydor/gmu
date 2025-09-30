@@ -45,8 +45,9 @@ int main(int argc, char* argv[]) {
     bool running = true;
     while (running) {
         if (player.track_ended()) {
+            ++track;
             if (track < player.track_count())
-                player.start_track(++track);
+                player.start_track(track);
             else
                 running = false;
         }

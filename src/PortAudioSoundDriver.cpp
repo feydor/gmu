@@ -2,6 +2,8 @@
 
 #include <stdexcept>
 #include <string.h>
+#include <vector>
+#include <algorithm>
 
 /* This routine will be called by the PortAudio engine when audio is needed.
 ** It may called at interrupt level on some machines so don't do anything
@@ -11,8 +13,7 @@ static int portaudio_callback(const void *inputBuffer, void *outputBuffer,
                            unsigned long framesPerBuffer,
                            const PaStreamCallbackTimeInfo* timeInfo,
                            PaStreamCallbackFlags statusFlags,
-                           void *userData)
-{
+                           void *userData) {
     // extract data
     auto driver = (PortAudioSoundDriver*) userData;
     i16 *out = (i16*)outputBuffer;
@@ -21,13 +22,14 @@ static int portaudio_callback(const void *inputBuffer, void *outputBuffer,
     (void) statusFlags;
 
     // do buffer update, left + right samples
-    i16 samples[2*framesPerBuffer];
+    i16 samples[2*framesPerBuffer] = {0};
     driver->load_samples(samples, 2*framesPerBuffer);
-    for(unsigned int i=1; i<2*framesPerBuffer; i+=2) {
+    for (unsigned i=1; i<2*framesPerBuffer; i+=2) {
         *out++ = samples[i-1];
         *out++ = samples[i];
     }
-    return 0;
+
+    return paContinue;
 }
 
 void PortAudioSoundDriver::print_devices_info() {
@@ -50,7 +52,7 @@ void PortAudioSoundDriver::print_devices_info() {
                     printf("Found the device=%s!\n", devname);
                     device = j;
                 }
-                printf("device_name=%s", device_info->name);
+                printf("Device %d: %s", j, device_info->name);
                 if (default_devid == j)
                     printf(" [DEFAULT]");
                 printf("\n");
@@ -68,28 +70,62 @@ void PortAudioSoundDriver::print_devices_info() {
     outParams.suggestedLatency = Pa_GetDeviceInfo(outParams.device)->defaultLowOutputLatency;
 }
 
+// TODO: Unused, use to matche certain devices?
+static PaDeviceIndex get_pa_device_index() {
+    std::vector<std::string> possible_device_names = {"pulse"};
+    auto api_count = Pa_GetHostApiCount();
+    for (int i=0; i<api_count; ++i) {
+        auto api_info = Pa_GetHostApiInfo(i);
+        auto device_count = api_info->deviceCount;
+        for (int j=0; j<device_count; ++j) {
+            const PaDeviceInfo* device_info = Pa_GetDeviceInfo(j);
+            bool found = std::any_of(std::begin(possible_device_names), std::end(possible_device_names), [&](auto name){
+                return name == device_info->name;
+            });
+            if (found)
+                return j;
+        }
+    }
+
+    printf("DID NOT FIND ANY matching device names!!!!");
+    return 0;
+}
+
 PortAudioSoundDriver::PortAudioSoundDriver(std::function<void(i16 *, unsigned long)> samples_cb, long sample_rate)
         : samples_callback{samples_cb} {
 
     // calculate buffer size based on fill_rate and sample_rate
     int min_size = sample_rate * 2 / fill_rate;
-    int buf_size = 512;
-    while (buf_size < min_size)
-        buf_size *= 2;
+    int frames_per_buf = 1024;
+    while (frames_per_buf < min_size)
+        frames_per_buf *= 2;
 
     // init portaudio
-    //TODO: using default device for now
     handle_error(Pa_Initialize());
     initialized = true;
 
-    auto err = Pa_OpenDefaultStream(&stream,
-                                0,          /* no input channels */
-                                2,          /* stereo output */
-                                paInt16,    /* 16 bit digital output */
-                                sample_rate,
-                                buf_size, /* frames per buffer */
-                                portaudio_callback,
-                                this);
+    //TODO: using default device for now
+    PaStreamParameters outParams;
+    outParams.device = Pa_GetDefaultOutputDevice();
+    if (outParams.device == paNoDevice) {
+        fprintf(stderr, "No default device found!\n");
+        handle_error(-1);
+    }
+    outParams.sampleFormat = paInt16;
+    outParams.channelCount = 2;
+    outParams.hostApiSpecificStreamInfo = NULL;
+    outParams.suggestedLatency = Pa_GetDeviceInfo(outParams.device)->defaultLowOutputLatency;
+
+    // print_devices_info();
+
+    auto err = Pa_OpenStream(&stream,
+                        NULL,
+                        &outParams,
+                        sample_rate,
+                        frames_per_buf, /* frames per buffer */
+                        paClipOff,
+                        portaudio_callback,
+                        this);
     handle_error(err);
 }
 
