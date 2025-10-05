@@ -16,7 +16,7 @@ public:
     virtual void stop_audio() = 0;
     
     /** Loads a 16bit signed buffer with samples */
-    virtual void load_samples(i16 *buf, unsigned long nframes) const = 0;
+    virtual bool load_samples(i16 *buf, unsigned long nframes) const = 0;
 
     virtual bool stream_running() const = 0;
 

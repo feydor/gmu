@@ -23,7 +23,11 @@ static int portaudio_callback(const void *inputBuffer, void *outputBuffer,
 
     // do buffer update, left + right samples
     i16 samples[2*framesPerBuffer] = {0};
-    driver->load_samples(samples, 2*framesPerBuffer);
+    bool done = driver->load_samples(samples, 2*framesPerBuffer);
+    if (done) {
+        return paAbort;
+    }
+
     for (unsigned i=1; i<2*framesPerBuffer; i+=2) {
         *out++ = samples[i-1];
         *out++ = samples[i];
@@ -91,7 +95,7 @@ static PaDeviceIndex get_pa_device_index() {
     return 0;
 }
 
-PortAudioSoundDriver::PortAudioSoundDriver(std::function<void(i16 *, unsigned long)> samples_cb, long sample_rate)
+PortAudioSoundDriver::PortAudioSoundDriver(std::function<bool(i16 *, unsigned long)> samples_cb, long sample_rate)
         : samples_callback{samples_cb} {
 
     // calculate buffer size based on fill_rate and sample_rate
@@ -142,8 +146,8 @@ bool PortAudioSoundDriver::stream_running() const {
     return running;
 }
 
-void PortAudioSoundDriver::load_samples(i16 *buf, unsigned long nframes) const {
-    samples_callback(buf, nframes);
+bool PortAudioSoundDriver::load_samples(i16 *buf, unsigned long nframes) const {
+    return samples_callback(buf, nframes);
 };
 
 void PortAudioSoundDriver::start_audio() {

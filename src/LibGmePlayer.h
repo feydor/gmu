@@ -1,23 +1,22 @@
 #ifndef GMU_PLAYER_H
 #define GMU_PLAYER_H
 
+#include "GameMusicPlayer.h"
+
 #include <gme/gme.h>
 
 #include "SoundDriver.h"
 
-class GmePlayer {
+class LibGmePlayer : public GameMusicPlayer {
 public:
     /** Using default sound driver */
-    GmePlayer(long sample_rate, bool loop);
-    ~GmePlayer();
+    LibGmePlayer(long sample_rate, bool loop);
+    ~LibGmePlayer();
 
-    /* Control methods */
-
-    void load_file(const char *path);
+    void load_file(const std::string& path) override;
     /** Loads an m3u playlist. Must have called load_file before this. */
     void load_m3u(const char* path);
-    /** Starts playback. Must have called load_file before this. */
-    void start_track(int track);
+    void start_track(int max_loops) override;
     /**
      * Try to start playback of next track
      * @returns true if next track was started
@@ -28,22 +27,16 @@ public:
      * @returns true if previous track was started
      */
     bool start_prev_track();
-    void toggle_play();
-    void toggle_loop();
-    void skip(int ms);
-
-    /* Info methods */
-    
-    bool track_ended() const;
-    int track_count() const;
-    void print_track_info(int track) const;
-    /** Prints a progress meter. Run this in the main event loop. Uses carriage return (\\r) to reprint on the same line each call. */
-    void print_now_playing_line() const;
-
-    static void handle_error(const char* str);
+    void toggle_play() override;
+    void toggle_continuous_loop() override;
+    void skip(int ms);    
+    bool track_ended() const override;
+    void print_current_track_info() override;
+    void print_now_playing_info() const override;
 
 private:
-    void set_current_fade_point();
+    int track_count() const;
+    static void handle_error(const char* str);
 
     Music_Emu *emu = nullptr;
     gme_info_t* track_info = nullptr;

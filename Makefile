@@ -15,8 +15,10 @@ endif
 
 CC=g++
 LD=$(CC)
-CFLAGS += -I. -I.. -std=c++17 `pkg-config --cflags libgme` -I/opt/homebrew/include -I./argspp/src -g -DDEBUG -Wall -Wextra
-LIBS =	`pkg-config --libs libgme` -L/opt/homebrew/lib -lportaudio
+CFLAGS += -I. -I.. -std=c++17 `pkg-config --cflags libgme` -I/opt/homebrew/include -I./argspp/src \
+-g -DDEBUG -Wall -Wextra
+LIBS =	`pkg-config --libs libgme` -L/opt/homebrew/lib -lportaudio \
+-L/usr/local/lib -lvgm-player -lvgm-emu -lvgm-utils -lz
 MACHINE = $(shell $(CC) -dumpmachine)
 EXE = gmu-$(MACHINE)
 

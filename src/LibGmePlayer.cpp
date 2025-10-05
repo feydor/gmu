@@ -1,4 +1,4 @@
-#include "GmePlayer.h"
+#include "LibGmePlayer.h"
 #include "Utils.h"
 #include "PortAudioSoundDriver.h"
 
@@ -11,34 +11,35 @@
 
 static int fade_time(int track_length);
 
-GmePlayer::GmePlayer(long sample_rate, bool loop)
+LibGmePlayer::LibGmePlayer(long sample_rate, bool loop)
     : sample_rate{sample_rate}, loop{loop} {
-    auto samples_callback = [&](i16* buf, unsigned long frame_count) {
+    auto samples_callback = [&](i16* buf, unsigned long frame_count) -> bool {
         auto err = gme_play(this->emu, frame_count, buf);
         if (err) {
             fprintf(stderr, "err=%s\n", err);
             throw std::runtime_error(err);
         }
+        return false;
     };
     driver = new PortAudioSoundDriver(samples_callback, sample_rate);
 }
 
-GmePlayer::~GmePlayer() {
+LibGmePlayer::~LibGmePlayer() {
     driver->stop_audio();
     gme_delete(emu);
     gme_free_info(track_info);
     delete driver;
 }
 
-bool GmePlayer::track_ended() const {
+bool LibGmePlayer::track_ended() const {
     return emu ? gme_track_ended(emu) : false;
 }
 
-int GmePlayer::track_count() const {
+int LibGmePlayer::track_count() const {
     return emu ? gme_track_count(emu) : -1;
 }
 
-void GmePlayer::toggle_play() {
+void LibGmePlayer::toggle_play() {
     paused = !paused;
     if (paused)
         driver->stop_audio();
@@ -46,7 +47,7 @@ void GmePlayer::toggle_play() {
         driver->start_audio();
 }
 
-void GmePlayer::toggle_loop() {
+void LibGmePlayer::toggle_continuous_loop() {
     loop = !loop;
     if (loop) {
         // set fade to indefinte time
@@ -57,7 +58,7 @@ void GmePlayer::toggle_loop() {
     }
 }
 
-bool GmePlayer::start_next_track() {
+bool LibGmePlayer::start_next_track() {
     if (current_track + 1 < track_count()) {
         start_track(current_track + 1);
         return true;
@@ -65,7 +66,7 @@ bool GmePlayer::start_next_track() {
     return false;
 }
 
-bool GmePlayer::start_prev_track() {
+bool LibGmePlayer::start_prev_track() {
     if (current_track - 1 >= 0) {
         start_track(current_track - 1);
         return true;
@@ -73,18 +74,20 @@ bool GmePlayer::start_prev_track() {
     return false;
 }
 
-void GmePlayer::load_file(const char *path) {
+void LibGmePlayer::load_file(const std::string& path) {
     // Determine file type
-    gme_type_t file_type = gme_identify_extension(path);
+    gme_type_t file_type = gme_identify_extension(path.c_str());
     Utils::require_nonnull(file_type, "Unsupported music file type");
 
     // printf("Loading file %s...\n", path); fflush(stdout);
-    GmePlayer::handle_error(gme_open_file(path, &emu, sample_rate));
+    LibGmePlayer::handle_error(gme_open_file(path.c_str(), &emu, sample_rate));
 }
 
-void GmePlayer::start_track(int track) {
+// TODO: max_loops, use it?
+void LibGmePlayer::start_track(int max_loops) {
     Utils::require_nonnull(emu, "Didn't initialize emulator");
 
+    int track = 0; // TODO: let this be configurable
     bool first_play = true;
     if (!track_info) {
         gme_free_info(track_info);
@@ -93,7 +96,7 @@ void GmePlayer::start_track(int track) {
     }
 
     current_track = track;
-    GmePlayer::handle_error(gme_track_info(emu, &track_info, track));
+    LibGmePlayer::handle_error(gme_track_info(emu, &track_info, track));
     // Calculate track length
     if (track_info->length <= 0)
         track_info->length = track_info->intro_length + track_info->loop_length * 2;
@@ -103,11 +106,11 @@ void GmePlayer::start_track(int track) {
         track_info->length = (long) (2.5 * 60 * 1000);
 
     if (!first_play) {
-        print_track_info(track);
+        print_current_track_info();
     }
 
     // Start track
-    GmePlayer::handle_error(gme_start_track(emu, track));
+    LibGmePlayer::handle_error(gme_start_track(emu, track));
 
     // Set fade out point
     if (!loop)
@@ -119,21 +122,21 @@ void GmePlayer::start_track(int track) {
         driver->start_audio();
 }
 
-void GmePlayer::load_m3u(const char* path) {
+void LibGmePlayer::load_m3u(const char* path) {
     Utils::require_nonnull(emu, "Didn't initialize emulator");
     Utils::require_nonnull(path, "path was null");
 
-    GmePlayer::handle_error(gme_load_m3u(emu, path));
+    LibGmePlayer::handle_error(gme_load_m3u(emu, path));
 }
 
-void GmePlayer::handle_error(const char* str) {
+void LibGmePlayer::handle_error(const char* str) {
     if (str) {
         fprintf(stderr, "Found error: %s\n", str); fflush(stderr);
         throw std::runtime_error(str);
     }
 }
 
-void GmePlayer::skip(int ms) {
+void LibGmePlayer::skip(int ms) {
     Utils::require_nonnull(emu, "Didn't initialize emulator");
     int since_ms = gme_tell(emu);
     if (since_ms + ms > 0 && since_ms + ms < track_info->play_length)
@@ -145,8 +148,7 @@ static int fade_time(int track_length) {
     return track_length - (track_length < 8000 ? 1000 : 8000);
 }
 
-void GmePlayer::print_track_info(int track) const {
-    (void) track; // TODO: Remove this unused param?
+void LibGmePlayer::print_current_track_info() {
     // Get and print main info for track
     Utils::require_nonnull(track_info, "Track not loaded");
 
@@ -164,7 +166,7 @@ void GmePlayer::print_track_info(int track) const {
     printf("\n");
 }
 
-void GmePlayer::print_now_playing_line() const {
+void LibGmePlayer::print_now_playing_info() const {
     Utils::require_nonnull(emu, "Didn't initialize emulator");
 
     int since_ms = gme_tell(emu);

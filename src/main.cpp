@@ -1,4 +1,5 @@
-#include "GmePlayer.h"
+#include "LibGmePlayer.h"
+#include "LibVgmPlayer.h"
 #include "../argspp/src/args.h"
 
 #include <stdlib.h>
@@ -16,6 +17,7 @@
 using namespace std;
 
 static atomic<char> latest_key_pressed('\0');
+std::atomic<bool> running{true};
 
 static bool ends_with(const string &str, const string &ext);
 static void check_for_key_press();
@@ -33,22 +35,25 @@ int main(int argc, char* argv[]) {
     string path = parser.args[0];
     string opt_playlist = parser.args.size() == 2 ? parser.args[1] : "";
     int track = stoi(parser.value("track"));
-    GmePlayer player{44100, parser.found("loop")};
+
+    auto player = GameMusicPlayer::from_file(path, 44100);
     printf("\033[1J\033[H"); fflush(stdout); // clear warnings from portaudio
 
-    player.load_file(path.c_str());
-    if (ends_with(opt_playlist, ".m3u"))
-        player.load_m3u(opt_playlist.c_str());
-    player.start_track(track);
+    player->load_file(path.c_str());
+    // if (ends_with(opt_playlist, ".m3u"))
+    //     player.load_m3u(opt_playlist.c_str());
+    // player.start_track(track);
+    player->start_track();
 
     // start keyboard input thread
     thread input_thread(check_for_key_press);
 
-    bool running = true;
     while (running) {
-        if (player.track_ended()) {
-            if (!player.start_next_track())
-                running = false;
+        if (player->track_ended() == true) {
+            running = false;
+            break;
+            // if (!player.start_next_track())
+            //     running = false;
         }
 
         // non-blocking check for keyboard input
@@ -57,24 +62,24 @@ int main(int argc, char* argv[]) {
             case '\0': break;
             case 'p':
             case 32:
-                player.toggle_play();
+                player->toggle_play();
                 break;
             case 'n':
-            case '>':
-                player.start_next_track();
-                break;
+            // case '>':
+            //     player.start_next_track();
+            //     break;
             case 'b':
-            case '<':
-                player.start_prev_track();
-                break;
-            case '.':
-                player.skip(5000);
-                break;
-            case ',':
-                player.skip(-5000);
-                break;
+            // case '<':
+            //     player.start_prev_track();
+            //     break;
+            // case '.':
+            //     player.skip(5000);
+            //     break;
+            // case ',':
+            //     player.skip(-5000);
+            //     break;
             case 'L':
-                player.toggle_loop();
+                player->toggle_continuous_loop();
                 break;
             default:
                 break;
@@ -83,7 +88,7 @@ int main(int argc, char* argv[]) {
             latest_key_pressed = '\0';
         }
 
-        player.print_now_playing_line();
+        player->print_now_playing_info();
         this_thread::sleep_for(chrono::milliseconds(16)); // 60fps
     }
 
@@ -114,7 +119,7 @@ static void check_for_key_press() {
     // Set the new settings immediately
     tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
 
-    while (true) {
+    while (running) {
         c = getchar();
         latest_key_pressed = c;
     }
