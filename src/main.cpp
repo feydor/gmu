@@ -11,7 +11,7 @@
 #include <stdexcept>
 #include <filesystem> 
 
-// TODO: Unix only, Maybe use define to switch code based on OS (conio.h on Windows)
+// TODO: Unix only, Maybe use define to switch code based on OS? (conio.h on Windows)
 #include <unistd.h>
 #include <termios.h>
 
@@ -63,19 +63,20 @@ int main(int argc, char* argv[]) {
     } else {
 	play_file(path, 0);
     }
-    
-    printf("\n"); // quits getchar block in input thread
-    input_thread.join();
-    printf("\n");
-    return 0;
+
+    printf("Bye.\n");
+    exit(0);
 }
 
 static vector<string> get_filepaths(string dir) {
     vector<string> out;
-    for (const auto& entry : fs::directory_iterator(dir))
+    for (const auto& entry : fs::directory_iterator(dir)) {
 	// TODO: also filter by extensions
-	if (fs::is_regular_file(entry))
+	if (fs::is_regular_file(entry)
+	    && GameMusicPlayer::is_supported_file_extension(entry.path().extension())) {
 	    out.push_back(entry.path().string());
+	}
+    }
     return out;
 }
 
@@ -85,6 +86,7 @@ static int play_file(string path, int playlist_index) {
     printf("\033[1J\033[H"); fflush(stdout);
 
     player->load_file(path.c_str());
+    // TODO: currently unsupported, maybe treat as similar to a directory?
     // if (ends_with(opt_playlist, ".m3u"))
     //     player.load_m3u(opt_playlist.c_str());
     // player.start_track(track);
@@ -140,7 +142,6 @@ static int play_file(string path, int playlist_index) {
         this_thread::sleep_for(chrono::milliseconds(16)); // 60fps
     }
 
-    printf("\n\nDONE!!!!!!!\n");
     return playlist_index + 1;
 }
 

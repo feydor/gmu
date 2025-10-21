@@ -9,10 +9,12 @@
 
 class LibGmePlayer : public GameMusicPlayer {
 public:
-    /** Using default sound driver */
     LibGmePlayer(long sample_rate, bool loop);
     ~LibGmePlayer();
-
+    /**
+     * @param extension with or without leading period
+     */
+    static bool is_supported_file_extension(const std::string& extension);
     void load_file(const std::string& path) override;
     /** Loads an m3u playlist. Must have called load_file before this. */
     void load_m3u(const char* path);

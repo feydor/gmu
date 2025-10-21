@@ -11,6 +11,10 @@
 
 static int fade_time(int track_length);
 
+bool LibGmePlayer::is_supported_file_extension(const std::string& ext) {
+    return 0 != gme_identify_extension(ext.c_str());
+}
+
 LibGmePlayer::LibGmePlayer(long sample_rate, bool loop)
     : sample_rate{sample_rate}, loop{loop} {
     auto samples_callback = [&](i16* buf, unsigned long frame_count) -> bool {

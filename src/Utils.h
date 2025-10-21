@@ -15,6 +15,8 @@ namespace Utils {
             throw std::runtime_error(msg);
     }
 
+    bool is_blank(const std::string& str);
+
     std::string format_min_sec(float time_s);
 };
 

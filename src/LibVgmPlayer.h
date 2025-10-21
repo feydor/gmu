@@ -10,6 +10,7 @@ class LibVgmPlayer : public GameMusicPlayer {
 public:
     LibVgmPlayer(long sample_rate);
     ~LibVgmPlayer();
+    static bool is_supported_file_extension(const std::string& ext);
     void load_file(const std::string& path) override;
     void start_track(int ntrack, int max_loops) override;
     void toggle_play() override;

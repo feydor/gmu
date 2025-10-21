@@ -25,6 +25,13 @@ static std::unordered_map<std::string, std::string> get_track_tags(const char* c
     }
     return map;
 }
+ 
+bool LibVgmPlayer::is_supported_file_extension(const std::string& ext) {
+    if (Utils::is_blank(ext)) return false;
+    auto x = ext[0] == '.' ? ext.substr(1) : std::string{ext};
+    std::transform(x.begin(), x.end(), x.begin(), ::toupper);
+    return x == "VGM" || x == "VGZ";
+}
 
 LibVgmPlayer::LibVgmPlayer(long sample_rate) {
     player = new VGMPlayer();
