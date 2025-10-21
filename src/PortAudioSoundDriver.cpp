@@ -74,27 +74,6 @@ void PortAudioSoundDriver::print_devices_info() {
     outParams.suggestedLatency = Pa_GetDeviceInfo(outParams.device)->defaultLowOutputLatency;
 }
 
-// TODO: Unused, use to matche certain devices?
-static PaDeviceIndex get_pa_device_index() {
-    std::vector<std::string> possible_device_names = {"pulse"};
-    auto api_count = Pa_GetHostApiCount();
-    for (int i=0; i<api_count; ++i) {
-        auto api_info = Pa_GetHostApiInfo(i);
-        auto device_count = api_info->deviceCount;
-        for (int j=0; j<device_count; ++j) {
-            const PaDeviceInfo* device_info = Pa_GetDeviceInfo(j);
-            bool found = std::any_of(std::begin(possible_device_names), std::end(possible_device_names), [&](auto name){
-                return name == device_info->name;
-            });
-            if (found)
-                return j;
-        }
-    }
-
-    printf("DID NOT FIND ANY matching device names!!!!");
-    return 0;
-}
-
 PortAudioSoundDriver::PortAudioSoundDriver(std::function<bool(i16 *, unsigned long)> samples_cb, long sample_rate)
         : samples_callback{samples_cb} {
 
@@ -108,7 +87,6 @@ PortAudioSoundDriver::PortAudioSoundDriver(std::function<bool(i16 *, unsigned lo
     handle_error(Pa_Initialize());
     initialized = true;
 
-    //TODO: using default device for now
     PaStreamParameters outParams;
     outParams.device = Pa_GetDefaultOutputDevice();
     if (outParams.device == paNoDevice) {

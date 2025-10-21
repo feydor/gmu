@@ -11,10 +11,12 @@ public:
     LibVgmPlayer(long sample_rate);
     ~LibVgmPlayer();
     void load_file(const std::string& path) override;
-    void start_track(int max_loops) override;
+    void start_track(int ntrack, int max_loops) override;
     void toggle_play() override;
     bool track_ended() const override;
     void toggle_continuous_loop() override;
+    bool start_next_track() override;
+    bool start_prev_track() override;
     void print_now_playing_info() const override;
     void print_current_track_info() override;
 private:

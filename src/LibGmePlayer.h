@@ -16,17 +16,17 @@ public:
     void load_file(const std::string& path) override;
     /** Loads an m3u playlist. Must have called load_file before this. */
     void load_m3u(const char* path);
-    void start_track(int max_loops) override;
+    void start_track(int ntrack, int max_loops) override;
     /**
      * Try to start playback of next track
      * @returns true if next track was started
      */
-    bool start_next_track();
+    bool start_next_track() override;
     /**
      * Try to start playback of previous track
      * @returns true if previous track was started
      */
-    bool start_prev_track();
+    bool start_prev_track() override;
     void toggle_play() override;
     void toggle_continuous_loop() override;
     void skip(int ms);    

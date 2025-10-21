@@ -84,7 +84,8 @@ void LibVgmPlayer::load_file(const std::string& path) {
 }
 
 // TODO: there are no tracks in VGM?
-void LibVgmPlayer::start_track(int max_loops) {
+void LibVgmPlayer::start_track(int ntrack, int max_loops) {
+    (void) ntrack;
     this->max_loops = max_loops;
     current_track_length_sec = player->Tick2Second(player->GetTotalTicks());
     current_track_tags = get_track_tags(player->GetTags());
@@ -117,6 +118,16 @@ void LibVgmPlayer::toggle_continuous_loop() {
     } else {
         max_loops = player->GetCurLoop() + 1;
     }
+}
+
+bool LibVgmPlayer::start_next_track() {
+    // TODO: FIX
+    return true;
+}
+
+bool LibVgmPlayer::start_prev_track() {
+    // TODO: FIX
+    return true;
 }
 
 void LibVgmPlayer::print_current_track_info() {

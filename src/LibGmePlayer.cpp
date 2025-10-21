@@ -59,16 +59,18 @@ void LibGmePlayer::toggle_continuous_loop() {
 }
 
 bool LibGmePlayer::start_next_track() {
+    // TODO: Fix this, pass track to start_track (harcoded to zero)
     if (current_track + 1 < track_count()) {
-        start_track(current_track + 1);
+        start_track(current_track + 1, 2); // TODO: pass in max_loops
         return true;
     }
     return false;
 }
 
 bool LibGmePlayer::start_prev_track() {
+    // TODO: Fix this, pass track to start_track (harcoded to zero)
     if (current_track - 1 >= 0) {
-        start_track(current_track - 1);
+        start_track(current_track - 1, 2); // TODO: pass in max_loops
         return true;
     }
     return false;
@@ -84,10 +86,9 @@ void LibGmePlayer::load_file(const std::string& path) {
 }
 
 // TODO: max_loops, use it?
-void LibGmePlayer::start_track(int max_loops) {
+void LibGmePlayer::start_track(int track, int max_loops) {
     Utils::require_nonnull(emu, "Didn't initialize emulator");
 
-    int track = 0; // TODO: let this be configurable
     bool first_play = true;
     if (!track_info) {
         gme_free_info(track_info);

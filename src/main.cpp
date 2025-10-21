@@ -9,21 +9,29 @@
 #include <atomic>
 #include <chrono>
 #include <stdexcept>
+#include <filesystem> 
 
 // TODO: Unix only, Maybe use define to switch code based on OS (conio.h on Windows)
 #include <unistd.h>
 #include <termios.h>
 
-using namespace std;
+#define SPACE 32
 
+using namespace std;
+namespace fs = std::filesystem;
+
+// Globals
 static atomic<char> latest_key_pressed('\0');
 std::atomic<bool> running{true};
+bool playlist_mode = false;
+int playlist_size = 1;
 
-static bool ends_with(const string &str, const string &ext);
 static void check_for_key_press();
+static int play_file(string path, int i);
+static vector<string> get_filepaths(string dir);
 
 int main(int argc, char* argv[]) {
-    args::ArgParser parser("Usage: gmu file [m3u-playlist] [-t track] [-l loop]\nvideo game music format player", "1.0.0");
+    args::ArgParser parser("Usage: gmu FILE-OR-DIRECTORY [-l loop]\nvideo game music format player", "1.1.0");
     parser.option("track t", "0");
     parser.flag("loop l");
     parser.parse(argc, argv);
@@ -33,27 +41,59 @@ int main(int argc, char* argv[]) {
     }
 
     string path = parser.args[0];
+    if (!fs::exists(path)) {
+	fprintf(stderr, "File does not exist!\n");
+	return 1;
+    }
+    
     string opt_playlist = parser.args.size() == 2 ? parser.args[1] : "";
     int track = stoi(parser.value("track"));
+    
+    // start keyboard input thread
+    thread input_thread(check_for_key_press);
 
+    if (fs::is_directory(path)) {
+	playlist_mode = true;
+	vector<string> filepaths = get_filepaths(path);
+	playlist_size = filepaths.size();
+	size_t i = 0;
+	while (i < filepaths.size()) {
+	    i = play_file(filepaths[i], i);
+	}
+    } else {
+	play_file(path, 0);
+    }
+    
+    printf("\n"); // quits getchar block in input thread
+    input_thread.join();
+    printf("\n");
+    return 0;
+}
+
+static vector<string> get_filepaths(string dir) {
+    vector<string> out;
+    for (const auto& entry : fs::directory_iterator(dir))
+	// TODO: also filter by extensions
+	if (fs::is_regular_file(entry))
+	    out.push_back(entry.path().string());
+    return out;
+}
+
+static int play_file(string path, int playlist_index) {
     auto player = GameMusicPlayer::from_file(path, 44100);
-    printf("\033[1J\033[H"); fflush(stdout); // clear warnings from portaudio
+    // clear warnings from portaudio
+    printf("\033[1J\033[H"); fflush(stdout);
 
     player->load_file(path.c_str());
     // if (ends_with(opt_playlist, ".m3u"))
     //     player.load_m3u(opt_playlist.c_str());
     // player.start_track(track);
     player->start_track();
-
-    // start keyboard input thread
-    thread input_thread(check_for_key_press);
-
+    running = true;
     while (running) {
         if (player->track_ended() == true) {
             running = false;
             break;
-            // if (!player.start_next_track())
-            //     running = false;
         }
 
         // non-blocking check for keyboard input
@@ -61,17 +101,25 @@ int main(int argc, char* argv[]) {
             switch (latest_key_pressed) {
             case '\0': break;
             case 'p':
-            case 32:
+            case SPACE:
                 player->toggle_play();
                 break;
-            case 'n':
-            // case '>':
-            //     player.start_next_track();
-            //     break;
-            case 'b':
-            // case '<':
-            //     player.start_prev_track();
-            //     break;
+            case '>':
+		if (playlist_mode && (playlist_index + 1) < playlist_size) {
+		    running = false;
+		    break;
+		}
+                break;
+            case '<':
+		if (playlist_mode && playlist_index >= 1)
+		    return playlist_index - 1;               
+                break;
+	    case '.':
+		player->start_next_track();
+		break;
+	    case ',':
+		player->start_prev_track();
+		break;
             // case '.':
             //     player.skip(5000);
             //     break;
@@ -92,15 +140,8 @@ int main(int argc, char* argv[]) {
         this_thread::sleep_for(chrono::milliseconds(16)); // 60fps
     }
 
-    input_thread.join();
-    return 0;
-}
-
-static bool ends_with(const string &str, const string &ext) {
-    if (ext[0] != '.')
-        throw runtime_error("ext must start with a period");
-    return str.length() >= ext.length() + 1 &&
-           str.compare(str.length() - ext.length(), ext.length(), ext) == 0;
+    printf("\n\nDONE!!!!!!!\n");
+    return playlist_index + 1;
 }
 
 // Function to continuously check for keyboard input
