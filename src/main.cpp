@@ -11,11 +11,14 @@
 #include <stdexcept>
 #include <filesystem> 
 
-// TODO: Unix only, Maybe use define to switch code based on OS? (conio.h on Windows)
+// TODO: All Posix only, used for IO
+// Maybe use define to switch code based on OS? (conio.h on Windows)
 #include <unistd.h>
 #include <termios.h>
+#include <sys/utsname.h>
 
 #define SPACE 32
+#define VERSION "v1.1.0"
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -25,13 +28,15 @@ static atomic<char> latest_key_pressed('\0');
 std::atomic<bool> running{true};
 bool playlist_mode = false;
 int playlist_size = 1;
+struct termios old_tio;
 
 static void check_for_key_press();
-static int play_file(string path, int i);
-static vector<string> get_filepaths(string dir);
+static int play_file(const string& path, int i);
+static vector<string> get_filepaths(const string& dir);
+static string get_version();
 
 int main(int argc, char* argv[]) {
-    args::ArgParser parser("Usage: gmu FILE-OR-DIRECTORY [-l loop]\nvideo game music format player", "1.1.0");
+    args::ArgParser parser("Usage: gmu FILE-OR-DIRECTORY [-l loop] [-v] [-h]\nvideo game music format player (VGM, VGZ, NSF, GBS, etc)", get_version());
     parser.option("track t", "0");
     parser.flag("loop l");
     parser.parse(argc, argv);
@@ -47,7 +52,7 @@ int main(int argc, char* argv[]) {
     }
     
     string opt_playlist = parser.args.size() == 2 ? parser.args[1] : "";
-    int track = stoi(parser.value("track"));
+    // int track = stoi(parser.value("track"));
     
     // start keyboard input thread
     thread input_thread(check_for_key_press);
@@ -65,13 +70,14 @@ int main(int argc, char* argv[]) {
     }
 
     printf("Bye.\n");
+    // Restore the old CLI settings
+    tcsetattr(STDIN_FILENO, TCSANOW, &old_tio);
     exit(0);
 }
 
-static vector<string> get_filepaths(string dir) {
+static vector<string> get_filepaths(const string& dir) {
     vector<string> out;
     for (const auto& entry : fs::directory_iterator(dir)) {
-	// TODO: also filter by extensions
 	if (fs::is_regular_file(entry)
 	    && GameMusicPlayer::is_supported_file_extension(entry.path().extension())) {
 	    out.push_back(entry.path().string());
@@ -80,7 +86,7 @@ static vector<string> get_filepaths(string dir) {
     return out;
 }
 
-static int play_file(string path, int playlist_index) {
+static int play_file(const string& path, int playlist_index) {
     auto player = GameMusicPlayer::from_file(path, 44100);
     // clear warnings from portaudio
     printf("\033[1J\033[H"); fflush(stdout);
@@ -145,11 +151,17 @@ static int play_file(string path, int playlist_index) {
     return playlist_index + 1;
 }
 
+static string get_version() {
+    string version = VERSION;
+    struct utsname uts;
+    int err = uname(&uts);
+    if (err < 0) return version + "-unknown_machine";
+    return version + "-" + uts.machine + "-" + uts.sysname;
+}
+
 // Function to continuously check for keyboard input
 static void check_for_key_press() {
-    struct termios old_tio, new_tio;
-    unsigned char c;
-
+    struct termios new_tio;
     tcgetattr(STDIN_FILENO, &old_tio);
 
     // Save the old settings to restore them at the end
@@ -160,7 +172,8 @@ static void check_for_key_press() {
 
     // Set the new settings immediately
     tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
-
+    
+    unsigned char c;
     while (running) {
         c = getchar();
         latest_key_pressed = c;
